@@ -10,7 +10,7 @@ class FreqSeries:
         """
         :raises ValueError: For non-equidistantly sampled data.
         """
-        self._data = data
+        self._data: pd.Series = data
         self._sample_rate = self._calc_sample_rate()
 
     @property
@@ -21,6 +21,16 @@ class FreqSeries:
     def sample_rate(self) -> float:
         """The rate in Hz at which the freq. measurements have been taken."""
         return self._sample_rate
+
+    def trim(self, start: int = None, end: int = None) -> None:
+        """Trim some values from start and/or end (in-place operation).
+
+        Does nothing, if neither `start` nor `end` are specified.
+        """
+        if start:
+            self._data = self._data.iloc[start:]
+        if end:
+            self._data = self._data.iloc[:-end]
 
     def _calc_sample_rate(self) -> float:
         """
