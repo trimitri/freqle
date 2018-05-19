@@ -4,18 +4,30 @@ import datetime
 import pandas as pd
 
 class FreqSeries:
-    """A series of frequency measurements, as usually taken by a counter."""
+    """A series of frequency measurements, as usually taken by a counter.
+
+    Indices (times) must be strictly monotonic.
+    """
 
     def __init__(self, data: pd.Series) -> None:
         """
         :raises ValueError: For non-equidistantly sampled data.
         """
+        if not data.index.is_monotonic_increasing:
+            raise ValueError("Times are not monotonically increasing.")
+
         self._data: pd.Series = data
         self._sample_rate = self._calc_sample_rate()
 
     @property
     def data(self) -> pd.Series:
         return self._data
+
+    @property
+    def duration(self) -> float:
+        """Duration of the measurement in seconds."""
+        idx = self._data.index
+        return (idx[-1] - idx[0]).total_seconds()
 
     @property
     def sample_rate(self) -> float:
