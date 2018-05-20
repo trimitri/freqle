@@ -9,13 +9,23 @@ class FreqSeries:
     Indices (times) must be strictly monotonic.
     """
 
-    def __init__(self, data: pd.Series) -> None:
+    def __init__(self, data: pd.Series, original_freq: float = None) -> None:
         """
+        :param data: The measured frequencies.
+        :param original_freq: The frequency that the DUT was actually operated
+                        at. For physical (and numerical) reasons, the actual
+                        frequency fluctuation of the oscillator is often scaled
+                        down to the <= GHz range when measuring. This parameter
+                        specifies the original frequency, that the fluctuations
+                        have to be related to.
+                        If `None` is given, absence of frequency scaling
+                        (direct measurement!) is implied.
         :raises ValueError: For non-equidistantly sampled data.
         """
         if not data.index.is_monotonic_increasing:
             raise ValueError("Times are not monotonically increasing.")
 
+        self.org_freq = original_freq
         self._data: pd.Series = data
         self._sample_rate = self._calc_sample_rate()
 
@@ -27,7 +37,8 @@ class FreqSeries:
     def duration(self) -> float:
         """Duration of the measurement in seconds."""
         idx = self._data.index
-        return (idx[-1] - idx[0]).total_seconds()
+        delta: datetime.timedelta = idx[-1] - idx[0]
+        return delta.total_seconds()
 
     @property
     def sample_rate(self) -> float:
