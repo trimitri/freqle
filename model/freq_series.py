@@ -69,6 +69,7 @@ class FreqSeries:
         times = self._data.index
         guess: datetime.timedelta = times[1] - times[0]
         for sample in range(len(times) - 1):
-            if times[sample + 1] - times[sample] != guess:
-                raise ValueError("Non-uniform sample rate.")
+            local_sample_rate = times[sample + 1] - times[sample]
+            if  abs(local_sample_rate - guess) > .01 * guess:
+                raise ValueError("Non-uniform sample distance {}.".format(local_sample_rate))
         return 1/guess.total_seconds()
