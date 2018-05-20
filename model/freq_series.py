@@ -9,7 +9,8 @@ class FreqSeries:
     Indices (times) must be strictly monotonic.
     """
 
-    def __init__(self, data: pd.Series, original_freq: float = None) -> None:
+    def __init__(self, data: pd.Series, original_freq: float = None,
+                 session: str = None) -> None:
         """
         :param data: The measured frequencies.
         :param original_freq: The frequency that the DUT was actually operated
@@ -20,12 +21,17 @@ class FreqSeries:
                         have to be related to.
                         If `None` is given, absence of frequency scaling
                         (direct measurement!) is implied.
+        :param session: Label for indicating the context of the measurement.
+                        Especially useful when different setups are shown in
+                        one plot. A separate session shoud be assigned for
+                        every change in the experimental setup.
         :raises ValueError: For non-equidistantly sampled data.
         """
         if not data.index.is_monotonic_increasing:
             raise ValueError("Times are not monotonically increasing.")
 
         self.org_freq = original_freq
+        self.session = session
         self._data: pd.Series = data
         self._sample_rate = self._calc_sample_rate()
 

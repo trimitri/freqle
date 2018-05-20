@@ -4,13 +4,16 @@ import pandas as pd
 from ..model.freq_series import FreqSeries
 
 
-def parse_txt(file_name: str) -> FreqSeries:
-    """Parse frequency measurement into a Pandas time series of freqs."""
+def parse_txt(file_name: str, session: str = None) -> FreqSeries:
+    """Parse frequency measurement into a Pandas time series of freqs.
+
+    :param session: Measurement context. See `FreqSeries`'s `session` param.
+    """
     data = pd.read_table(file_name, squeeze=True, index_col=0, usecols=range(2))
     data.index = pd.to_datetime(data.index, unit='s',
                                 origin=get_start_time(file_name))
     data.name = _get_info(file_name)
-    return FreqSeries(data)
+    return FreqSeries(data, session=session)
 
 
 def get_start_time(file_name: str) -> pd.datetime:

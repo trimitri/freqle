@@ -51,5 +51,7 @@ def total_deviation(measurements: List[FreqSeries],
 
 
 def _label(data: FreqSeries) -> str:
-    return "{}Hz for {}s".format(ballpark(data.sample_rate),
-                                 ballpark(data.duration))
+    label = "{}: ".format(data.session) if data.session else ""
+    label += "{}Hz for {}s".format(ballpark(data.sample_rate),
+                                   ballpark(data.duration))
+    return label
