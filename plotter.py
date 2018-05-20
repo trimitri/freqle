@@ -20,8 +20,8 @@ def amplitude_spectral_density(measurements: List[FreqSeries],
     """
     fig = plt.figure()
     for mmt in measurements:
-        asd = signal.welch(mmt.data, mmt.sample_rate, **welch_args)
-        plt.loglog(asd[0][1:], asd[1][1:], label=_label(mmt))
+        psd = signal.welch(mmt.data, mmt.sample_rate, **welch_args)
+        plt.loglog(psd[0][1:], np.sqrt(psd[1][1:]), label=_label(mmt))
         # Don't include the zeros that welch() returns.
     plt.legend()
     return fig
