@@ -42,8 +42,8 @@ def total_deviation(measurements: List[FreqSeries],
         taus = np.geomspace(4/mmt.sample_rate, mmt.duration/4, num=n_taus)
         # Conservative estimate for meaningful τ values based on data.
 
-        tau, adev, error, _ = allantools.totdev(mmt.data, rate=mmt.sample_rate,
-                                                taus=taus)
+        tau, adev, error, _ = allantools.totdev(
+            mmt.data.data, data_type='freq', rate=mmt.sample_rate, taus=taus)
         if mmt.org_freq:
             # Scale to original oscillator frequency
             adev /= mmt.org_freq
