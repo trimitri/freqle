@@ -23,6 +23,9 @@ def amplitude_spectral_density(measurements: List[FreqSeries],
         psd = signal.welch(mmt.data, mmt.sample_rate, **welch_args)
         plt.loglog(psd[0][1:], np.sqrt(psd[1][1:]), label=_label(mmt))
         # Don't include the zeros that welch() returns.
+    plt.xlabel("Frequency in Hz")
+    plt.ylabel(r"Amplitude Spectral Density in Hz/$\sqrt{\mathrm{Hz}}$")
+    _loglog_grid()
     plt.legend()
     return fig
 
@@ -34,7 +37,7 @@ def total_deviation(measurements: List[FreqSeries],
     :param n_taus: Number of different τ's to use during calculation of each
                     different measurement. (Plot accuracy)
     """
-    plt.figure()
+    fig = plt.figure()
     for mmt in measurements:
         taus = np.geomspace(4/mmt.sample_rate, mmt.duration/4, num=n_taus)
         # Conservative estimate for meaningful τ values based on data.
@@ -46,8 +49,12 @@ def total_deviation(measurements: List[FreqSeries],
             adev /= mmt.org_freq
             error /= mmt.org_freq
         plt.loglog(tau, adev, label=_label(mmt))
-        plt.legend()
         plt.gca().fill_between(tau, adev - error, adev + error, alpha=.4)
+    plt.legend()
+    plt.xlabel("Averaging Time τ in s")
+    plt.ylabel("Total Deviation [Howe 2000] in Hz/Hz")
+    _loglog_grid()
+    return fig
 
 
 def _label(data: FreqSeries) -> str:
@@ -55,3 +62,8 @@ def _label(data: FreqSeries) -> str:
     label += "{}Hz for {}s".format(ballpark(data.sample_rate),
                                    ballpark(data.duration))
     return label
+
+
+def _loglog_grid() -> None:
+    """Plot a grid into the current loglog plot."""
+    plt.grid(which='both')
