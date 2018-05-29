@@ -100,11 +100,19 @@ def _get_style_cycler() -> cycle:
 
 def _label(data: FreqSeries) -> str:
     label = "{}: ".format(data.session) if data.session else ""
-    label += "{}Hz for {}s".format(ballpark(data.sample_rate),
-                                   ballpark(data.duration))
+    label += "{}Hz for {}s".format(_pretty(data.sample_rate),
+                                   _pretty(data.duration))
     return label
 
 
 def _loglog_grid() -> None:
     """Plot a grid into the current loglog plot."""
     plt.grid(which='both')
+
+
+def _pretty(number: float) -> str:
+
+    actual_SI = {
+        24: 'Y', 21: 'Z', 18: 'E', 15: 'P', 12: 'T', 9: 'G', 6: 'M', 3: 'k', 0: '',
+        -3: 'm', -6: 'µ', -9: 'n', -12: 'p', -15: 'f', -18: 'a', -21: 'z', -24: 'y'}
+    return ballpark(number, prefixes=actual_SI)
