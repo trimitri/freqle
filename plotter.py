@@ -33,13 +33,26 @@ def amplitude_spectral_density(measurements: List[FreqSeries],
     return fig
 
 
-def total_deviation(measurements: List[FreqSeries], n_taus: int = 200,
-                    show_error: bool = False) -> matplotlib.figure.Figure:
+def total_deviation(
+        measurements: List[FreqSeries],
+        n_taus: int = 200,
+        show_error: bool = False,
+        allowable_irregularity: float = 1.05) -> matplotlib.figure.Figure:
     """An improved Allan deviation working with circular data sets.
 
     :param n_taus: Number of different τ's to use during calculation of each
-                    different measurement. (Plot accuracy)
+                different measurement. (Plot accuracy)
+    :param show_error: Plot error "bars".
+    :param allowable_irregularity: Deviations in sample rate deemed acceptable.
+                See `FreqSeries`'s documentation on the `sampling_regularity`
+                property.
+    :raises ValueError: The data was sampled at a rate too uneven. If this is
+                known and allowable, consider setting `allowable_irregularity`.
     """
+    for mmt in measurements:
+        if mmt.sampling_regularity > allowable_irregularity:
+            raise ValueError("Series is too irregular in sample rate.")
+
     fig = plt.figure()
     for mmt in measurements:
         taus = np.geomspace(4/mmt.sample_rate, mmt.duration/4, num=n_taus)
@@ -78,7 +91,6 @@ def _generate_line_props(mmt: FreqSeries) -> Dict:
 
     return {'linestyle': next(_generate_line_props.prev_style['style']),
             'color': _generate_line_props.prev_style['color']}
-
 
 
 def _get_style_cycler() -> cycle:

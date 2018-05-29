@@ -1,6 +1,8 @@
 """Provides the FreqSeries class, an object wrapping counter measurements."""
 
 import datetime
+from typing import Tuple
+import numpy as np
 import pandas as pd
 
 class FreqSeries:
@@ -33,7 +35,16 @@ class FreqSeries:
         self.org_freq = original_freq
         self.session = session
         self._data: pd.Series = data
-        self._sample_rate = self._calc_sample_rate()
+
+        rate, regularity = self._analyze_sample_rate()
+        self._rate: float = rate
+        """Median sample rate of the data in Hz.
+        """
+        self._regularity: float = regularity
+        """How much does the sample rate deviate?
+
+        max((max_rate / median_rate), (median_rate / min_rate))
+        """
 
     @property
     def data(self) -> pd.Series:
@@ -49,27 +60,28 @@ class FreqSeries:
     @property
     def sample_rate(self) -> float:
         """The rate in Hz at which the freq. measurements have been taken."""
-        return self._sample_rate
+        return self._rate
+
+    @property
+    def sampling_regularity(self) -> float:
+        return self._regularity
 
     def trim(self, start: int = None, end: int = None) -> None:
         """Trim some values from start and/or end (in-place operation).
 
         Does nothing, if neither `start` nor `end` are specified.
         """
-        if start:
+        if start is not None:
             self._data = self._data.iloc[start:]
-        if end:
+        if end is not None:
             self._data = self._data.iloc[:-end]
 
-    def _calc_sample_rate(self) -> float:
+    def _analyze_sample_rate(self) -> Tuple[float, float]:
         """
-        :returns: Sample rate in Hz.
+        :returns: (median rate in Hz, rate regularity)
         :raises ValueError: The sample rate is not uniform.
         """
-        times = self._data.index
-        guess: datetime.timedelta = times[1] - times[0]
-        for sample in range(len(times) - 1):
-            local_sample_rate = times[sample + 1] - times[sample]
-            if  abs(local_sample_rate - guess) > .01 * guess:
-                raise ValueError("Non-uniform sample distance {}.".format(local_sample_rate))
-        return 1/guess.total_seconds()
+        times = np.diff([date.timestamp() for date in self._data.index])
+        median = np.median(times)
+        uniformity = max(np.max(times) / median, median / np.min(times))
+        return (1/float(median), float(uniformity))
