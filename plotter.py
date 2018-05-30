@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy import signal
 
-from .model.freq_series import FreqSeries
+from .freq_series import FreqSeries
 from .fbg_util.decorators import static_variable
 
 
