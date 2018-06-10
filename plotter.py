@@ -20,7 +20,7 @@ def amplitude_spectral_density(measurements: List[FreqSeries],
 
     :param welch_args: Arguments passed to `scipy.signal.welch`.
     """
-    fig = plt.figure()
+    fig = _create_figure()
     for mmt in measurements:
         psd = signal.welch(mmt.data, mmt.sample_rate, **welch_args)
         plt.loglog(psd[0][1:], np.sqrt(psd[1][1:]), label=_label(mmt),
@@ -31,6 +31,14 @@ def amplitude_spectral_density(measurements: List[FreqSeries],
     _loglog_grid()
     plt.legend()
     return fig
+
+
+def save(figure: matplotlib.figure.Figure, file_name: str) -> None:
+    """Save the figure for publication.
+
+    This applies some default export settings.
+    """
+    figure.savefig(file_name, bbox_inches='tight', pad_inches=0, format='pdf')
 
 
 def total_deviation(
@@ -53,7 +61,7 @@ def total_deviation(
         if mmt.sampling_regularity > allowable_irregularity:
             raise ValueError("Series is too irregular in sample rate.")
 
-    fig = plt.figure()
+    fig = _create_figure()
     for mmt in measurements:
         taus = np.geomspace(4/mmt.sample_rate, mmt.duration/4, num=n_taus)
         # Conservative estimate for meaningful τ values based on data.
@@ -111,8 +119,15 @@ def _loglog_grid() -> None:
 
 
 def _pretty(number: float) -> str:
-
     actual_SI = {
         24: 'Y', 21: 'Z', 18: 'E', 15: 'P', 12: 'T', 9: 'G', 6: 'M', 3: 'k', 0: '',
         -3: 'm', -6: 'µ', -9: 'n', -12: 'p', -15: 'f', -18: 'a', -21: 'z', -24: 'y'}
     return ballpark(number, prefixes=actual_SI)
+
+
+def _create_figure() -> matplotlib.figure.Figure:
+    # Setting the figure width will set the "estimated bounding box" to that
+    # size. After rigorous cropping, the resulting PDF will be smaller.
+    width = 8
+    height = 2/3 * width
+    return plt.figure(figsize=(width, height))
