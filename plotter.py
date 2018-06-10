@@ -119,9 +119,9 @@ def _loglog_grid() -> None:
 
 
 def _pretty(number: float) -> str:
-    actual_SI = {
-        24: 'Y', 21: 'Z', 18: 'E', 15: 'P', 12: 'T', 9: 'G', 6: 'M', 3: 'k', 0: '',
-        -3: 'm', -6: 'µ', -9: 'n', -12: 'p', -15: 'f', -18: 'a', -21: 'z', -24: 'y'}
+    actual_SI = {  # \u2009 is a thin space.
+        24: '\u2009Y', 21: '\u2009Z', 18: '\u2009E', 15: '\u2009P', 12: '\u2009T', 9: '\u2009G', 6: '\u2009M', 3: '\u2009k', 0: '\u2009',
+        -3: '\u2009m', -6: '\u2009µ', -9: '\u2009n', -12: '\u2009p', -15: '\u2009f', -18: '\u2009a', -21: '\u2009z', -24: '\u2009y'}
     return ballpark(number, prefixes=actual_SI)
 
 
