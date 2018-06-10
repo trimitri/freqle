@@ -1,7 +1,7 @@
 """Plotting some meaning out of frequency series."""
 
 from itertools import cycle
-from typing import Dict, List
+from typing import Callable, Dict, List, NamedTuple
 
 import allantools
 from ballpark import ballpark  # human-readable numbers
@@ -12,6 +12,13 @@ from scipy import signal
 
 from .freq_series import FreqSeries
 from .fbg_util.decorators import static_variable
+
+
+class Adev(NamedTuple):
+    """A calculated allan (or similar) deviation; ready to plot."""
+    taus: np.ndarray
+    devs: np.ndarray
+    error: np.ndarray = None
 
 
 def amplitude_spectral_density(measurements: List[FreqSeries],
@@ -44,7 +51,6 @@ def save(figure: matplotlib.figure.Figure, file_name: str) -> None:
 def total_deviation(
         measurements: List[FreqSeries],
         n_taus: int = 200,
-        show_error: bool = False,
         allowable_irregularity: float = 1.05) -> matplotlib.figure.Figure:
     """An improved Allan deviation working with circular data sets.
 
@@ -57,29 +63,38 @@ def total_deviation(
     :raises ValueError: The data was sampled at a rate too uneven. If this is
                 known and allowable, consider setting `allowable_irregularity`.
     """
-    for mmt in measurements:
-        if mmt.sampling_regularity > allowable_irregularity:
-            raise ValueError("Series is too irregular in sample rate.")
-
     fig = _create_figure()
     for mmt in measurements:
-        taus = np.geomspace(4/mmt.sample_rate, mmt.duration/4, num=n_taus)
-        # Conservative estimate for meaningful τ values based on data.
-
-        tau, adev, error, _ = allantools.totdev(
-            mmt.data.data, data_type='freq', rate=mmt.sample_rate, taus=taus)
-        if mmt.org_freq:
-            # Scale to original oscillator frequency
-            adev /= mmt.org_freq
-            error /= mmt.org_freq
-        plt.loglog(tau, adev, label=_label(mmt), **_generate_line_props(mmt))
-        if show_error:
-            plt.gca().fill_between(tau, adev - error, adev + error, alpha=.4)
+        dev = _calculate_deviation(mmt, n_taus, allowable_irregularity)
+        plt.loglog(dev.taus, dev.devs, label=_label(mmt), **_generate_line_props(mmt))
+        if dev.error:
+            plt.gca().fill_between(dev.taus, dev.devs - dev.error,
+                                   dev.devs + dev.error, alpha=.4)
     plt.legend()
     plt.xlabel("Averaging Time τ in s")
     plt.ylabel("Total Deviation [Howe 2000] in Hz/Hz")
     _loglog_grid()
     return fig
+
+
+def _calculate_deviation(measurement: FreqSeries, n_taus: int,
+                         allowable_irregularity: float,
+                         algorithm: Callable = allantools.totdev) -> Adev:
+    """Calculate an allan-like deviation for given data."""
+    mmt = measurement
+    if mmt.sampling_regularity > allowable_irregularity:
+        raise ValueError("Series is too irregular in sample rate.")
+
+    taus = np.geomspace(4/mmt.sample_rate, mmt.duration/4, num=n_taus)
+    # Conservative estimate for meaningful τ values based on data.
+
+    tau, adev, error, _ = algorithm(mmt.data.data, data_type='freq',
+                                    rate=mmt.sample_rate, taus=taus)
+    if mmt.org_freq:
+        # Scale to original oscillator frequency
+        adev /= mmt.org_freq
+        error /= mmt.org_freq
+    return Adev(tau, adev, None)
 
 
 @static_variable('prev_style', None)
