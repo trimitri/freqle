@@ -1,6 +1,8 @@
 """Plotting some meaning out of frequency series."""
 
+from copy import deepcopy
 from itertools import cycle
+import logging
 from typing import Callable, Dict, List, NamedTuple
 
 import allantools
@@ -50,7 +52,6 @@ def save(figure: matplotlib.figure.Figure, file_name: str) -> None:
 
 def total_deviation(
         measurements: List[FreqSeries],
-        n_taus: int = 200,
         allowable_irregularity: float = 1.05) -> matplotlib.figure.Figure:
     """An improved Allan deviation working with circular data sets.
 
@@ -65,7 +66,7 @@ def total_deviation(
     """
     fig = _create_figure()
     for mmt in measurements:
-        dev = _calculate_deviation(mmt, n_taus, allowable_irregularity)
+        dev = _calculate_deviation(mmt, _generate_taus(mmt), allowable_irregularity)
         plt.loglog(dev.taus, dev.devs, label=_label(mmt), **_generate_line_props(mmt))
         if dev.error:
             plt.gca().fill_between(dev.taus, dev.devs - dev.error,
@@ -77,7 +78,32 @@ def total_deviation(
     return fig
 
 
-def _calculate_deviation(measurement: FreqSeries, n_taus: int,
+def deviation_stats(measurement: FreqSeries, n_chops: int = 6) -> matplotlib.figure.Figure:
+    """Estimate the error of the deviation calculation by statistics."""
+    slice_length = int(len(measurement.data) / n_chops)
+    devs = []
+    taus: np.ndarray = None
+    for idx in range(n_chops):
+        chop = deepcopy(measurement)
+        trim_head = idx * slice_length
+        trim_tail = (n_chops - idx - 1) * slice_length
+        chop.trim(start=trim_head, end=trim_tail if trim_tail > 0 else None)
+        taus = _generate_taus(chop) if taus is None else taus
+        # Use the same set of sampling times for all chops.
+        devs.append(_calculate_deviation(chop, taus, 1.05))
+
+    dev_matrix = np.array([dev.devs for dev in devs])
+    dev_avg = dev_matrix.mean(0)
+    dev_stdev = dev_matrix.std(0)
+    fig = _create_figure()
+    plt.loglog(devs[0].taus, dev_avg)
+    plt.loglog(devs[0].taus, dev_avg + dev_stdev)
+    plt.loglog(devs[0].taus, dev_avg - dev_stdev)
+
+    return fig
+
+
+def _calculate_deviation(measurement: FreqSeries, taus: np.ndarray,
                          allowable_irregularity: float,
                          algorithm: Callable = allantools.totdev) -> Adev:
     """Calculate an allan-like deviation for given data."""
@@ -85,11 +111,11 @@ def _calculate_deviation(measurement: FreqSeries, n_taus: int,
     if mmt.sampling_regularity > allowable_irregularity:
         raise ValueError("Series is too irregular in sample rate.")
 
-    taus = np.geomspace(4/mmt.sample_rate, mmt.duration/4, num=n_taus)
-    # Conservative estimate for meaningful τ values based on data.
-
     tau, adev, error, _ = algorithm(mmt.data.data, data_type='freq',
                                     rate=mmt.sample_rate, taus=taus)
+    if not np.array_equal(tau, taus):
+        logging.warning("Taus got changed/cropped")
+
     if mmt.org_freq:
         # Scale to original oscillator frequency
         adev /= mmt.org_freq
@@ -115,6 +141,11 @@ def _generate_line_props(mmt: FreqSeries) -> Dict:
     return {'linestyle': next(_generate_line_props.prev_style['style']),
             'color': _generate_line_props.prev_style['color']}
 
+
+def _generate_taus(mmt: FreqSeries, n_taus: int = 100) -> np.ndarray:
+    # Conservative estimate for meaningful τ values based on data.
+    return [0.01, .1, 1, 10, 100]
+    # return np.geomspace(10/mmt.sample_rate, mmt.duration/10, num=n_taus)
 
 def _get_style_cycler() -> cycle:
     styles = ['-', '-.', '--', (0, [5, 1, 1, 1, 1, 1])]  # Last: ..-..-
