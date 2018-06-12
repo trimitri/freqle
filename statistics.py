@@ -3,11 +3,13 @@ from copy import deepcopy
 from typing import Callable, List, NamedTuple
 import allantools
 import numpy as np
+from scipy import signal
 
 from .freq_series import FreqSeries
 
 _DEFAULT_DEV: Callable = allantools.oadev
 _OK_IRREGULARITY = 1.05
+
 
 class Adev(NamedTuple):  # pylint: disable=too-few-public-methods
     """A calculated allan (or similar) deviation."""
@@ -34,6 +36,55 @@ class Adev(NamedTuple):  # pylint: disable=too-few-public-methods
     Note that this interval must not necessary center around `.devs` exactly.
     For details see the error estimation code.
     """
+
+
+class Asd(NamedTuple):  # pylint: disable=too-few-public-methods
+    """A calculated amplitude spectral density."""
+    measurement: FreqSeries
+    freqs: np.ndarray
+    ampls: np.ndarray
+    errors: np.ndarray = None
+    """An estimate for the uncertainty of the calculated asd values.
+
+    This array has the shape (3, n), with three rows like
+      - [0] The freq value the error was estimated at
+      - [1] The minimum value of the confidence interval
+      - [2] The maximum value of the confidence interval
+
+    Note that this interval must not necessary center around `.ampls` exactly.
+    For details see the error estimation code.
+    """
+
+
+def asd(measurement: FreqSeries, estimate_error: bool = False,
+        drop_head: int = 6) -> Asd:
+    """Calculate the amplitude spectral density using Welch's method."""
+    def _estimate_error(mmt: FreqSeries, n_chops: int = 10) -> np.ndarray:
+        slice_length = int(len(mmt.data) / n_chops)
+        asds: List[Asd] = []
+        for idx in range(n_chops):
+            chop = deepcopy(mmt)
+            chop.trim(start=idx * slice_length,
+                      end=(n_chops - idx - 1) * slice_length)
+            asds.append(asd(chop, estimate_error=False))
+
+        for density in asds:
+            assert np.array_equal(density.freqs, asds[0].freqs)
+
+        asd_matrix = np.array([asd.ampls for asd in asds])
+        asd_avg = asd_matrix.mean(0)
+        asd_stdev = asd_matrix.std(0) / np.sqrt(n_chops)
+        return np.array([asds[0].freqs, asd_avg - asd_stdev, asd_avg + asd_stdev])
+
+    # Try to empirically imagine some good values for values per segment and
+    # FFT length.  The default values produce blocky plots.
+    n_pow = int(np.log2(len(measurement.data)))
+    [freqs, powers] = signal.welch(measurement.data, measurement.sample_rate,
+                                   nperseg=2**(n_pow - 5), nfft=2**(n_pow - 3))
+    # [freqs, powers] = signal.welch(measurement.data, measurement.sample_rate)
+
+    error = _estimate_error(measurement) if estimate_error else None
+    return Asd(measurement, freqs[drop_head:], np.sqrt(powers[drop_head:]), error)
 
 
 def deviation(measurement: FreqSeries, estimate_error: bool = True,

@@ -6,8 +6,6 @@ from typing import Dict, List
 from ballpark import ballpark  # human-readable numbers
 import matplotlib
 import matplotlib.pyplot as plt
-import numpy as np
-from scipy import signal
 
 from .freq_series import FreqSeries
 from .fbg_util.decorators import static_variable
@@ -17,18 +15,15 @@ _VERBOSE_METHOD_NAMES = {'adev': "Allan Deviation",
                          'oadev': "Overlapping Allan Deviation",
                          'totdev': "Total Deviation [Howe 2000]"}
 
-def amplitude_spectral_density(measurements: List[FreqSeries],
-                               welch_args: dict = {}) -> matplotlib.figure.Figure:
-    """Plot an ASD estimated by Welch's method.
-
-    :param welch_args: Arguments passed to `scipy.signal.welch`.
-    """
+def plot_asds(asds: List[stat.Asd]) -> matplotlib.figure.Figure:
+    """Plot an ASD."""
     fig = _create_figure()
-    for mmt in measurements:
-        psd = signal.welch(mmt.data, mmt.sample_rate, **welch_args)
-        plt.loglog(psd[0][1:], np.sqrt(psd[1][1:]), label=_label(mmt),
-                   **_generate_line_props(mmt))
-        # Don't include the zeros that welch() returns.
+    for asd in asds:
+        style = _generate_line_props(asd.measurement)
+        plt.loglog(asd.freqs, asd.ampls, label=_label(asd.measurement), **style)
+        if asd.errors is not None:
+            plt.gca().fill_between(asd.errors[0], asd.errors[1], asd.errors[2],
+                                   color=style['color'], alpha=.3)
     plt.xlabel("Frequency in Hz")
     plt.ylabel(r"Amplitude Spectral Density in Hz/$\sqrt{\mathrm{Hz}}$")
     _loglog_grid()
