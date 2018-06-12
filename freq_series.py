@@ -73,7 +73,7 @@ class FreqSeries:
         """
         if start is not None:
             self._data = self._data.iloc[start:]
-        if end is not None:
+        if end is not None and end > 0:
             self._data = self._data.iloc[:-end]
 
     def _analyze_sample_rate(self) -> Tuple[float, float]:
