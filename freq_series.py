@@ -1,7 +1,7 @@
 """Provides the FreqSeries class, an object wrapping counter measurements."""
 
 import datetime
-from typing import Tuple
+from typing import Tuple, Union
 import numpy as np
 import pandas as pd
 
@@ -54,8 +54,8 @@ class FreqSeries:
     def duration(self) -> float:
         """Duration of the measurement in seconds."""
         idx = self._data.index
-        delta: datetime.timedelta = idx[-1] - idx[0]
-        return delta.total_seconds()
+        delta = idx[-1] - idx[0]
+        return delta.total_seconds() if self._data.index.is_all_dates else delta
 
     @property
     def sample_rate(self) -> float:
@@ -81,7 +81,13 @@ class FreqSeries:
         :returns: (median rate in Hz, rate regularity)
         :raises ValueError: The sample rate is not uniform.
         """
-        times = np.diff([date.timestamp() for date in self._data.index])
+        # Assume seconds (as float),
+        timestamps = self._data.index
+        # except if the index is a DatetimeIndex.
+        if self._data.index.is_all_dates:
+            timestamps = [date.timestamp() for date in self._data.index]
+
+        times = np.diff(timestamps)
         median = np.median(times)
         uniformity = max(np.max(times) / median, median / np.min(times))
         return (1/float(median), float(uniformity))

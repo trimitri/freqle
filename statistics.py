@@ -123,7 +123,8 @@ def deviation(measurement: FreqSeries, estimate_error: bool = True,
 
     mmt = measurement
     if mmt.sampling_regularity > allowable_irregularity:
-        raise ValueError("Series is too irregular in sample rate.")
+        raise ValueError(
+            "Series is too irregular in sample rate ({}).".format(mmt.sampling_regularity))
 
     tau, adev, _, _ = method(mmt.data.data, data_type='freq',
                              rate=mmt.sample_rate,
@@ -138,5 +139,12 @@ def deviation(measurement: FreqSeries, estimate_error: bool = True,
 
 
 def generate_taus(mmt: FreqSeries, n_taus: int = 300, until: float = .1) -> np.ndarray:
+    """Generate useful tau values for the Allan deviation calculation.
+
+    This may fail for very small data sets.
+
+    Although the first available τ could be set to 1 * sample_rate, we start at
+    2*sample_rate here, as the first point is especially prone to aliasing.
+    """
     # Conservative estimate for meaningful τ values based on data.
     return np.geomspace(2/mmt.sample_rate, mmt.duration * until, num=n_taus)
