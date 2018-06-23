@@ -89,6 +89,7 @@ def asd(measurement: FreqSeries, estimate_error: bool = False,
 
 def deviation(measurement: FreqSeries, estimate_error: bool = True,
               taus: int = None,
+              until: float = 0.01,
               allowable_irregularity: float = _OK_IRREGULARITY,
               method: Callable = _DEFAULT_DEV) -> Adev:
     """Calculate an allan-like deviation for given data.
@@ -97,6 +98,7 @@ def deviation(measurement: FreqSeries, estimate_error: bool = True,
     :param allowable_irregularity: Deviations in sample rate deemed acceptable.
                 See `FreqSeries`'s documentation on the `sampling_regularity`
                 property.
+    :param until: Is passed to `generate_taus`.
     :raises ValueError: The data was sampled at a rate too uneven. If this is
                 known and allowable, consider setting `allowable_irregularity`.
     """
@@ -126,9 +128,9 @@ def deviation(measurement: FreqSeries, estimate_error: bool = True,
         raise ValueError(
             "Series is too irregular in sample rate ({}).".format(mmt.sampling_regularity))
 
-    tau, adev, _, _ = method(mmt.data.data, data_type='freq',
+    tau, adev, _, _ = method(mmt.data.values, data_type='freq',
                              rate=mmt.sample_rate,
-                             taus=generate_taus(mmt, until=.01) if taus is None else taus)
+                             taus=generate_taus(mmt, until=until) if taus is None else taus)
 
     error = _estimate_error(mmt) if estimate_error else None
 

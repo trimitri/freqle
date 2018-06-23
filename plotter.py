@@ -14,10 +14,13 @@ from . import statistics as stat
 _VERBOSE_METHOD_NAMES = {'adev': "Allan Deviation",
                          'oadev': "Overlapping Allan Deviation",
                          'totdev': "Total Deviation [Howe 2000]"}
+_FIG_WIDTH = 8.  # Figure width in inches.
+_ERR_ALPHA = .3  # Opacity of the shaded "error" regions.
+
 
 def plot_asds(asds: List[stat.Asd]) -> matplotlib.figure.Figure:
     """Plot an ASD."""
-    fig = _create_figure()
+    fig = create_figure()
     for asd in asds:
         style = _generate_line_props(asd.measurement)
         plt.loglog(asd.freqs, asd.ampls, label=_label(asd.measurement), **style)
@@ -44,13 +47,13 @@ def plot_deviations(devs: List[stat.Adev]) -> matplotlib.figure.Figure:
 
     :param show_error: Plot error "bars".
     """
-    fig = _create_figure()
+    fig = create_figure()
     for dev in devs:
         style = _generate_line_props(dev.measurement)
         plt.loglog(dev.taus, dev.devs, label=_label(dev.measurement), **style)
         if dev.errors is not None:
             plt.gca().fill_between(dev.errors[0], dev.errors[1], dev.errors[2],
-                                   color=style['color'], alpha=.3)
+                                   color=style['color'], alpha=_ERR_ALPHA)
     plt.legend()
     plt.xlabel("Averaging Time τ in s")
     plt.ylabel(_VERBOSE_METHOD_NAMES[devs[0].method_name])
@@ -106,9 +109,12 @@ def _pretty(number: float) -> str:
     return ballpark(number, prefixes=actual_SI)
 
 
-def _create_figure() -> matplotlib.figure.Figure:
+def create_figure(aspect: float = 3/2) -> matplotlib.figure.Figure:
+    """Just create an empty figure using default settings.
+
+    :param aspect: Figure aspect ratio.
+    """
+
     # Setting the figure width will set the "estimated bounding box" to that
     # size. After rigorous cropping, the resulting PDF will be smaller.
-    width = 8
-    height = 2/3 * width
-    return plt.figure(figsize=(width, height))
+    return plt.figure(figsize=(_FIG_WIDTH, _FIG_WIDTH / aspect))
