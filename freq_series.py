@@ -58,6 +58,11 @@ class FreqSeries:
         return delta.total_seconds() if self._data.index.is_all_dates else delta
 
     @property
+    def float_index(self) -> pd.Float64Index:
+        """Return the index in seconds since the epoch."""
+        return pd.to_numeric(self._data.index) / 1e9
+
+    @property
     def sample_rate(self) -> float:
         """The rate in Hz at which the freq. measurements have been taken."""
         return self._rate

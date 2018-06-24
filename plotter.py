@@ -1,11 +1,13 @@
 """Plotting some meaning out of frequency series."""
 
 from itertools import cycle
-from typing import Dict, List
+from math import floor, log10
+from typing import Any, Dict, List, Union
 
-from ballpark import ballpark  # human-readable numbers
+from ballpark import business as ballpark  # human-readable numbers
 import matplotlib
 import matplotlib.pyplot as plt
+from matplotlib.ticker import EngFormatter
 
 from .freq_series import FreqSeries
 from .fbg_util.decorators import static_variable
@@ -15,15 +17,21 @@ _VERBOSE_METHOD_NAMES = {'adev': "Allan Deviation",
                          'oadev': "Overlapping Allan Deviation",
                          'totdev': "Total Deviation [Howe 2000]"}
 _FIG_WIDTH = 8.  # Figure width in inches.
+_DEFAULT_ASPECT_RATIO = 3/2
 _ERR_ALPHA = .3  # Opacity of the shaded "error" regions.
 
 
-def plot_asds(asds: List[stat.Asd]) -> matplotlib.figure.Figure:
+def plot_asds(densities: List[stat.Asd],
+              aspect: float = _DEFAULT_ASPECT_RATIO,
+              plot_options: Dict[str, Any] = None) -> matplotlib.figure.Figure:
     """Plot an ASD."""
-    fig = create_figure()
+    plot_options = {} if plot_options is None else plot_options
+    fig = create_figure(aspect=aspect)
+    asds = densities if isinstance(densities, list) else [densities]
     for asd in asds:
         style = _generate_line_props(asd.measurement)
-        plt.loglog(asd.freqs, asd.ampls, label=_label(asd.measurement), **style)
+        plt.loglog(asd.freqs, asd.ampls, label=_label(asd.measurement),
+                   **style, **plot_options)
         if asd.errors is not None:
             plt.gca().fill_between(asd.errors[0], asd.errors[1], asd.errors[2],
                                    color=style['color'], alpha=.3)
@@ -42,12 +50,14 @@ def save(figure: matplotlib.figure.Figure, file_name: str) -> None:
     figure.savefig(file_name, bbox_inches='tight', pad_inches=0, format='pdf')
 
 
-def plot_deviations(devs: List[stat.Adev]) -> matplotlib.figure.Figure:
+def plot_deviations(deviations: List[stat.Adev],
+                    aspect: float = _DEFAULT_ASPECT_RATIO) -> matplotlib.figure.Figure:
     """An improved Allan deviation working with circular data sets.
 
     :param show_error: Plot error "bars".
     """
-    fig = create_figure()
+    fig = create_figure(aspect=aspect)
+    devs = deviations if isinstance(deviations, list) else [deviations]
     for dev in devs:
         style = _generate_line_props(dev.measurement)
         plt.loglog(dev.taus, dev.devs, label=_label(dev.measurement), **style)
@@ -58,6 +68,36 @@ def plot_deviations(devs: List[stat.Adev]) -> matplotlib.figure.Figure:
     plt.xlabel("Averaging Time τ in s")
     plt.ylabel(_VERBOSE_METHOD_NAMES[devs[0].method_name])
     _loglog_grid()
+    return fig
+
+
+def plot_freq(measurement: Union[FreqSeries, List[FreqSeries]],
+              figure: matplotlib.figure.Figure = None) -> matplotlib.figure.Figure:
+    """Plot one or more frequency timelines.
+
+    :param measurement: One or more (list of) FreqSeries to plot.
+    :param figure: Use this figure instead of creating one.
+    """
+    fig = create_figure() if figure is None else figure
+    mmts: List[FreqSeries] = [measurement] if isinstance(measurement, FreqSeries) else measurement
+
+    # Calculate offset to substract for better display.
+    offset = min([min(mmt.data) for mmt in mmts])
+    power = int(floor(log10(offset)) - 2)
+    ax_offset = int(floor(offset / 10**power) * 10**power)
+
+    for mmt in mmts:
+        plt.plot(mmt.float_index, mmt.data.values - ax_offset,
+                 label=mmt.session, linewidth=1)  # crowded plot needs smaller linewidth
+
+    plt.xlabel("Time in seconds")
+    plt.ylabel("Beat frequency (\N{MINUS SIGN}{}Hz)".format(_pretty(ax_offset)))
+
+    ax = fig.axes[0]
+    ax.yaxis.set_major_formatter(EngFormatter(unit="Hz", sep='\N{THIN SPACE}'))
+    ax.autoscale(tight=True, axis='x')
+    plt.legend()
+    plt.grid(which='both')
     return fig
 
 
@@ -109,12 +149,11 @@ def _pretty(number: float) -> str:
     return ballpark(number, prefixes=actual_SI)
 
 
-def create_figure(aspect: float = 3/2) -> matplotlib.figure.Figure:
+def create_figure(aspect: float = _DEFAULT_ASPECT_RATIO) -> matplotlib.figure.Figure:
     """Just create an empty figure using default settings.
 
     :param aspect: Figure aspect ratio.
     """
-
     # Setting the figure width will set the "estimated bounding box" to that
     # size. After rigorous cropping, the resulting PDF will be smaller.
     return plt.figure(figsize=(_FIG_WIDTH, _FIG_WIDTH / aspect))
