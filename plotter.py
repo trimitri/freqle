@@ -23,10 +23,11 @@ _ERR_ALPHA = .3  # Opacity of the shaded "error" regions.
 
 def plot_asds(densities: List[stat.Asd],
               aspect: float = _DEFAULT_ASPECT_RATIO,
+              figure: matplotlib.figure.Figure = None,
               plot_options: Dict[str, Any] = None) -> matplotlib.figure.Figure:
     """Plot an ASD."""
     plot_options = {} if plot_options is None else plot_options
-    fig = create_figure(aspect=aspect)
+    fig = create_figure(aspect=aspect) if figure is None else figure
     asds = densities if isinstance(densities, list) else [densities]
     for asd in asds:
         style = _generate_line_props(asd.measurement)
@@ -51,22 +52,24 @@ def save(figure: matplotlib.figure.Figure, file_name: str) -> None:
 
 
 def plot_deviations(deviations: List[stat.Adev],
+                    figure: matplotlib.figure.Figure = None,
                     aspect: float = _DEFAULT_ASPECT_RATIO) -> matplotlib.figure.Figure:
     """An improved Allan deviation working with circular data sets.
 
     :param show_error: Plot error "bars".
     """
-    fig = create_figure(aspect=aspect)
-    devs = deviations if isinstance(deviations, list) else [deviations]
+    fig = create_figure(aspect=aspect) if figure is None else figure
+    devs = [deviations] if isinstance(deviations, stat.Adev) else deviations
     for dev in devs:
         style = _generate_line_props(dev.measurement)
         plt.loglog(dev.taus, dev.devs, label=_label(dev.measurement), **style)
         if dev.errors is not None:
             plt.gca().fill_between(dev.errors[0], dev.errors[1], dev.errors[2],
                                    color=style['color'], alpha=_ERR_ALPHA)
+        method = dev.method_name
     plt.legend()
     plt.xlabel("Averaging Time τ in s")
-    plt.ylabel(_VERBOSE_METHOD_NAMES[devs[0].method_name])
+    plt.ylabel(_VERBOSE_METHOD_NAMES[method])
     _loglog_grid()
     return fig
 
