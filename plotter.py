@@ -2,7 +2,7 @@
 
 from itertools import cycle
 from math import floor, log10
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Tuple, Union
 
 from ballpark import business as ballpark  # human-readable numbers
 import matplotlib
@@ -79,7 +79,11 @@ def plot_deviations(deviations: List[stat.Adev],
 
 
 def plot_freq(measurement: Union[FreqSeries, List[FreqSeries]],
-              figure: matplotlib.figure.Figure = None) -> matplotlib.figure.Figure:
+              figure: matplotlib.figure.Figure = None,
+              merge_labels: bool = False,
+              offset: float = None,
+              scatter: bool = False,
+              tight: bool = True) -> Tuple[matplotlib.figure.Figure, float]:
     """Plot one or more frequency timelines.
 
     :param measurement: One or more (list of) FreqSeries to plot.
@@ -89,23 +93,27 @@ def plot_freq(measurement: Union[FreqSeries, List[FreqSeries]],
     mmts: List[FreqSeries] = [measurement] if isinstance(measurement, FreqSeries) else measurement
 
     # Calculate offset to substract for better display.
-    offset = min([min(mmt.data) for mmt in mmts])
-    power = int(floor(log10(offset)) - 2)
-    ax_offset = int(floor(offset / 10**power) * 10**power)
+    min_value = min([min(mmt.data) for mmt in mmts])
+    power = int(floor(log10(min_value)) - 2)
+    ax_offset = int(floor(offset / 10**power) * 10**power) if offset is None else offset
 
     for mmt in mmts:
-        plt.plot(mmt.float_index, mmt.data.values - ax_offset,
-                 label=_label(mmt), linewidth=1)  # crowded plot needs smaller linewidth
+        if scatter:
+            plt.scatter(mmt.float_index, mmt.data.values - ax_offset,
+                        label=_label(mmt, merge_labels), alpha=.4)
+        else:
+            plt.plot(mmt.float_index, mmt.data.values - ax_offset,
+                     label=_label(mmt, merge_labels), linewidth=1)
 
     plt.xlabel("Time in seconds")
     plt.ylabel("Beat frequency (\N{MINUS SIGN}{}Hz)".format(_pretty(ax_offset)))
 
-    axes = fig.axes[0]
+    axes = plt.gca()
     axes.yaxis.set_major_formatter(EngFormatter(unit="Hz", sep='\N{THIN SPACE}'))
-    axes.autoscale(tight=True, axis='x')
+    axes.autoscale(tight=tight, axis='x')
     plt.legend()
     plt.grid(which='both')
-    return fig
+    return (fig, ax_offset)
 
 
 @static_variable('prev_style', None)
@@ -140,7 +148,7 @@ def _label(data: FreqSeries, merge_labels: bool = False) -> str:
     label = "{}".format(data.session) if data.session else ""
     if not merge_labels:
         label += ": {}Hz for {}s".format(_pretty(data.sample_rate),
-                                        _pretty(data.duration))
+                                         _pretty(data.duration))
     return label
 
 

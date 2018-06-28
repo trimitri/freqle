@@ -1,7 +1,6 @@
 """Provides the FreqSeries class, an object wrapping counter measurements."""
 
-import datetime
-from typing import Tuple, Union
+from typing import Tuple
 import numpy as np
 import pandas as pd
 
@@ -60,7 +59,11 @@ class FreqSeries:
     @property
     def float_index(self) -> pd.Float64Index:
         """Return the index in seconds since the epoch."""
-        return pd.to_numeric(self._data.index) / 1e9
+        if isinstance(self._data.index, pd.DatetimeIndex):
+            return pd.to_numeric(self._data.index) / 1e9
+        if isinstance(self._data.index, pd.Float64Index):
+            return self._data.index
+        raise RuntimeError("Unkown index type.")
 
     @property
     def sample_rate(self) -> float:
