@@ -24,6 +24,7 @@ _ERR_ALPHA = .3  # Opacity of the shaded "error" regions.
 def plot_asds(densities: List[stat.Asd],
               aspect: float = _DEFAULT_ASPECT_RATIO,
               figure: matplotlib.figure.Figure = None,
+              merge_labels: bool = False,
               plot_options: Dict[str, Any] = None) -> matplotlib.figure.Figure:
     """Plot an ASD."""
     plot_options = {} if plot_options is None else plot_options
@@ -31,7 +32,8 @@ def plot_asds(densities: List[stat.Asd],
     asds = densities if isinstance(densities, list) else [densities]
     for asd in asds:
         style = _generate_line_props(asd.measurement)
-        plt.loglog(asd.freqs, asd.ampls, label=_label(asd.measurement),
+        plt.loglog(asd.freqs, asd.ampls,
+                   label=_label(asd.measurement, merge_labels),
                    **style, **plot_options)
         if asd.errors is not None:
             plt.gca().fill_between(asd.errors[0], asd.errors[1], asd.errors[2],
@@ -53,6 +55,7 @@ def save(figure: matplotlib.figure.Figure, file_name: str) -> None:
 
 def plot_deviations(deviations: List[stat.Adev],
                     figure: matplotlib.figure.Figure = None,
+                    merge_labels: bool = False,
                     aspect: float = _DEFAULT_ASPECT_RATIO) -> matplotlib.figure.Figure:
     """An improved Allan deviation working with circular data sets.
 
@@ -62,7 +65,8 @@ def plot_deviations(deviations: List[stat.Adev],
     devs = [deviations] if isinstance(deviations, stat.Adev) else deviations
     for dev in devs:
         style = _generate_line_props(dev.measurement)
-        plt.loglog(dev.taus, dev.devs, label=_label(dev.measurement), **style)
+        plt.loglog(dev.taus, dev.devs,
+                   label=_label(dev.measurement, merge_labels), **style)
         if dev.errors is not None:
             plt.gca().fill_between(dev.errors[0], dev.errors[1], dev.errors[2],
                                    color=style['color'], alpha=_ERR_ALPHA)
@@ -91,14 +95,14 @@ def plot_freq(measurement: Union[FreqSeries, List[FreqSeries]],
 
     for mmt in mmts:
         plt.plot(mmt.float_index, mmt.data.values - ax_offset,
-                 label=mmt.session, linewidth=1)  # crowded plot needs smaller linewidth
+                 label=_label(mmt), linewidth=1)  # crowded plot needs smaller linewidth
 
     plt.xlabel("Time in seconds")
     plt.ylabel("Beat frequency (\N{MINUS SIGN}{}Hz)".format(_pretty(ax_offset)))
 
-    ax = fig.axes[0]
-    ax.yaxis.set_major_formatter(EngFormatter(unit="Hz", sep='\N{THIN SPACE}'))
-    ax.autoscale(tight=True, axis='x')
+    axes = fig.axes[0]
+    axes.yaxis.set_major_formatter(EngFormatter(unit="Hz", sep='\N{THIN SPACE}'))
+    axes.autoscale(tight=True, axis='x')
     plt.legend()
     plt.grid(which='both')
     return fig
@@ -128,10 +132,15 @@ def _get_style_cycler() -> cycle:
     return cycle(styles)
 
 
-def _label(data: FreqSeries) -> str:
-    label = "{}: ".format(data.session) if data.session else ""
-    label += "{}Hz for {}s".format(_pretty(data.sample_rate),
-                                   _pretty(data.duration))
+@static_variable('prev_session', None)
+def _label(data: FreqSeries, merge_labels: bool = False) -> str:
+    if merge_labels and data.session == _label.prev_session:
+        return ""
+    _label.prev_session = data.session
+    label = "{}".format(data.session) if data.session else ""
+    if not merge_labels:
+        label += ": {}Hz for {}s".format(_pretty(data.sample_rate),
+                                        _pretty(data.duration))
     return label
 
 
