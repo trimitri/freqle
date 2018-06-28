@@ -39,7 +39,7 @@ def plot_asds(densities: List[stat.Asd],
             plt.gca().fill_between(asd.errors[0], asd.errors[1], asd.errors[2],
                                    color=style['color'], alpha=.3)
     plt.xlabel("Frequency in Hz")
-    plt.ylabel(r"Amplitude Spectral Density in Hz/$\sqrt{\mathrm{Hz}}$")
+    plt.ylabel(r"Frequency noise ASD in Hz/$\sqrt{\mathrm{Hz}}$")
     _loglog_grid()
     plt.legend()
     return fig
