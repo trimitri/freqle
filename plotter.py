@@ -95,7 +95,7 @@ def plot_freq(measurement: Union[FreqSeries, List[FreqSeries]],
     # Calculate offset to substract for better display.
     min_value = min([min(mmt.data) for mmt in mmts])
     power = int(floor(log10(min_value)) - 2)
-    ax_offset = int(floor(offset / 10**power) * 10**power) if offset is None else offset
+    ax_offset = int(floor(min_value / 10**power) * 10**power) if offset is None else offset
 
     for mmt in mmts:
         if scatter:
