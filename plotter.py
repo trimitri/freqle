@@ -94,6 +94,8 @@ def plot_freq(measurement: Union[FreqSeries, List[FreqSeries]],
 
     # Calculate offset to substract for better display.
     min_value = min([min(mmt.data) for mmt in mmts])
+    if not min_value > 0:
+        raise ValueError("Invalid beat note value {}.".format(min_value))
     power = int(floor(log10(min_value)) - 2)
     ax_offset = int(floor(min_value / 10**power) * 10**power) if offset is None else offset
 
