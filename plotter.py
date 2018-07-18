@@ -50,7 +50,8 @@ def save(figure: matplotlib.figure.Figure, file_name: str) -> None:
 
     This applies some default export settings.
     """
-    figure.savefig(file_name, bbox_inches='tight', pad_inches=0, format='pdf')
+    figure.savefig(file_name, bbox_inches='tight', pad_inches=0, dpi=600)
+    # NOTE that `pad_inches=0` can cause crammed layout in subplot arrangements.
 
 
 def plot_deviations(deviations: List[stat.Adev],
