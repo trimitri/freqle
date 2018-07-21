@@ -157,7 +157,7 @@ def _label(data: FreqSeries, merge_labels: bool = False) -> str:
 
 def _loglog_grid() -> None:
     """Plot a grid into the current loglog plot."""
-    plt.grid(which='both')
+    plt.grid(b=True, which='both')
 
 
 def _pretty(number: float) -> str:
