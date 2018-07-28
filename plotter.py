@@ -27,14 +27,14 @@ def plot_asds(densities: List[stat.Asd],
               merge_labels: bool = False,
               plot_options: Dict[str, Any] = None) -> matplotlib.figure.Figure:
     """Plot an ASD."""
-    plot_options = {} if plot_options is None else plot_options
     fig = create_figure(aspect=aspect) if figure is None else figure
     asds = densities if isinstance(densities, list) else [densities]
     for asd in asds:
         style = _generate_line_props(asd.measurement)
+        if plot_options is not None:
+            style.update(plot_options)
         plt.loglog(asd.freqs, asd.ampls,
-                   label=_label(asd.measurement, merge_labels),
-                   **style, **plot_options)
+                   label=_label(asd.measurement, merge_labels), **style)
         if asd.errors is not None:
             plt.gca().fill_between(asd.errors[0], asd.errors[1], asd.errors[2],
                                    color=style['color'], alpha=.3)
@@ -57,7 +57,8 @@ def save(figure: matplotlib.figure.Figure, file_name: str) -> None:
 def plot_deviations(deviations: List[stat.Adev],
                     figure: matplotlib.figure.Figure = None,
                     merge_labels: bool = False,
-                    aspect: float = _DEFAULT_ASPECT_RATIO) -> matplotlib.figure.Figure:
+                    aspect: float = _DEFAULT_ASPECT_RATIO,
+                    plot_options: dict = None) -> matplotlib.figure.Figure:
     """An improved Allan deviation working with circular data sets.
 
     :param show_error: Plot error "bars".
@@ -66,6 +67,8 @@ def plot_deviations(deviations: List[stat.Adev],
     devs = [deviations] if isinstance(deviations, stat.Adev) else deviations
     for dev in devs:
         style = _generate_line_props(dev.measurement)
+        if plot_options is not None:
+            style.update(plot_options)
         plt.loglog(dev.taus, dev.devs,
                    label=_label(dev.measurement, merge_labels), **style)
         if dev.errors is not None:
