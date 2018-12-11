@@ -21,6 +21,16 @@ _DEFAULT_ASPECT_RATIO = 3/2
 _ERR_ALPHA = .3  # Opacity of the shaded "error" regions.
 
 
+def create_figure(aspect: float = _DEFAULT_ASPECT_RATIO) -> matplotlib.figure.Figure:
+    """Just create an empty figure using default settings.
+
+    :param aspect: Figure aspect ratio.
+    """
+    # Setting the figure width will set the "estimated bounding box" to that
+    # size. After rigorous cropping, the resulting PDF will be smaller.
+    return plt.figure(figsize=(_FIG_WIDTH, _FIG_WIDTH / aspect))
+
+
 def plot_asds(densities: List[stat.Asd],
               aspect: float = _DEFAULT_ASPECT_RATIO,
               figure: matplotlib.figure.Figure = None,
@@ -173,13 +183,3 @@ def _pretty(number: float) -> str:
         -12: '\u2009p', -15: '\u2009f', -18: '\u2009a',
         -21: '\u2009z', -24: '\u2009y'}
     return ballpark(number, prefixes=actual_SI)
-
-
-def create_figure(aspect: float = _DEFAULT_ASPECT_RATIO) -> matplotlib.figure.Figure:
-    """Just create an empty figure using default settings.
-
-    :param aspect: Figure aspect ratio.
-    """
-    # Setting the figure width will set the "estimated bounding box" to that
-    # size. After rigorous cropping, the resulting PDF will be smaller.
-    return plt.figure(figsize=(_FIG_WIDTH, _FIG_WIDTH / aspect))
