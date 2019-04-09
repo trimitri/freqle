@@ -52,3 +52,28 @@ def pendulum_cnt91_txt(file_name: str, session: str = None) -> FreqSeries:
                                 origin=get_start_time(file_name))
     data.name = _get_info(file_name)
     return FreqSeries(data, session=session)
+
+
+def menlo_lambda_freq_counter(file_name: str, session_name: str,
+                              original_freq: float, series: int = 1) -> FreqSeries:
+    """
+    :param series: Which of the recorded time series to use?
+    """
+    data = pd.read_csv(file_name, delim_whitespace=True, usecols=[2 + series],
+                       header=None, squeeze=True)
+
+    # Create an equidistand time stamp index, as the values in the Menlo
+    # counter file are garbage.
+    first_sample = pd.read_csv(file_name, delim_whitespace=True,
+                               usecols=[0, 1], header=None,
+                               nrows=1).applymap(str).values
+    last_sample = pd.read_csv(file_name, delim_whitespace=True,
+                              usecols=[0, 1], header=None,
+                              skiprows=len(data) - 1).applymap(str).values
+    start = pd.to_datetime("{} {}".format(first_sample[0][0], first_sample[0][1]),
+                           format='%y%m%d %H%M%S.%f')
+    end = pd.to_datetime("{} {}".format(last_sample[0][0], last_sample[0][1]),
+                         format='%y%m%d %H%M%S.%f')
+    data.index = pd.date_range(start, end, len(data))
+
+    return FreqSeries(data, session=session_name, original_freq=original_freq)
